@@ -4,6 +4,9 @@ sample/**/package-lock.json
 # dependencies
 node_modules/
 
+# env files (can opt-in for committing if needed)
+.env*
+
 # IDE
 /.idea
 /.awcache
