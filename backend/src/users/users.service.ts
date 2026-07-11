@@ -10,6 +10,10 @@ export class UsersService {
     return this.db.select().from(users);
   }
 
+  async findUserByUsername(username: string) {
+    return this.db.select().from(users).where({ username });
+  }
+
   async createUser(username: string, email: string) {
     return this.db.insert(users).values({
       username,
