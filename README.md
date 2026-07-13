@@ -108,11 +108,9 @@ hypertube/
 ├── frontend/
 │   ├── app/
 │   ├── components/
-│   ├── pages/
-│   ├── hooks/
-│   ├── services/
-│   ├── styles/
-│   └── utils/
+│   ├── lib/
+│   ├── systemDesign/
+│   ├── public/
 │
 ├── backend/
 │   ├── src/
@@ -134,12 +132,9 @@ hypertube/
 │   │
 │   └── prisma/
 │
-├── docker/
-├── nginx/
 ├── docs/
 ├── docker-compose.yml
 ├── README.md
-└── .env
 ```
 
 ---
@@ -220,14 +215,13 @@ hypertube/
 - TypeScript
 - Tailwind CSS
 - Axios
-- React Query
+- shadcn
 
 ---
 
 ## Backend
 
-- NestJS (recommended)
-- Node.js
+- NestJS
 - TypeScript
 
 ---
