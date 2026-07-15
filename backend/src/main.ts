@@ -2,10 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import 'dotenv/config';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { TransformInterceptor } from './utils/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.useGlobalInterceptors(new TransformInterceptor);
   // enable validation globally
   app.useGlobalPipes(
     new ValidationPipe({
