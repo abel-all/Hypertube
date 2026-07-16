@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import Footer from "@/components/footer"
-import Navbar from "@/components/navbar"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import Footer from "@/components/layout/footer"
+import Navbar from "@/components/layout/navbar"
 import MovieCard from "@/components/movie-card"
 import { cn } from "@/lib/utils"
+import api from "@/lib/axios"
 
 import {
     ChevronDown,
@@ -19,16 +21,11 @@ type FilterKey = "genre" | "year" | "rating" | "language"
 type FilterOption = {
     key: FilterKey
     label: string
+    options: string[]
 }
 
-const FILTER_OPTIONS: FilterOption[] = [
-    { key: "genre", label: "Genre" },
-    { key: "year", label: "Year" },
-    { key: "rating", label: "Rating: 8+" },
-    { key: "language", label: "Language" },
-]
-
 type Movie = {
+    id?: string | number
     title: string
     year: string
     rating: string
@@ -38,42 +35,127 @@ type Movie = {
     watched?: boolean
 }
 
-const MOVIES: Movie[] = [
-    {
-        title: "Stellar Drift",
-        year: "2024",
-        rating: "8.9",
-        tags: ["Sci-Fi", "Drama"],
-        image:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuDn5nQT8_rybq1224lgK77af99UP2MrxCeVm_eBLBYIp1IX_dZaV_-Q6xmjlCvnC8DH3AaOs4o863SruJmbBoiIAYV-4Oz1_l0Xb20vB79pTDcxdCFD1g6WiDwLIwWIdp0-WHnX4LaejZNZd-8ldZDKAw0g2EgV1lG1AI9A8606GVtcj8XySl2EUinTkp95SeHihOaVzRNwT7FjSICBkiYDOEsVGOToNeFNfD4Fb0FN0zZtlLowkBgIiJMZ9Ua3VOx_mYHZdP85EpFx",
-        alt: "A cinematic movie poster featuring a solitary astronaut standing on a desolate, dark alien landscape.",
-    },
-    {
-        title: "Neon Echoes",
-        year: "2023",
-        rating: "7.4",
-        tags: [],
-        watched: true,
-        image:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuB8S01LCrcIgcqKk50rF649ur-7Db6-XIVr0DpVjMqLzcUll8Yi9dU1zbrOtjBvjwl2YGhEoKw38qctpcGaho14csOu5MXbbgW5Iyr5-_pBqcWIYe1ijO8q2RmUH1bvANUzPLUVlnsq7Ee_WkoaPkeqKaK9joT8JV8dPtUvTID2e3WN4ILXPK1arnWCHqtfwplIiuKZ8JVm60AGbWUJfSTxZHEWgaKIp5xhzRd57BbJ1RSPaHKhVKL_EsF5yj4Y4jgk11LzDatQF3y7",
-        alt: "A brooding, cinematic movie poster showing a rain-slicked cyberpunk city street at night.",
-    },
-]
-
 const SKELETON_COUNT = 4
+const DEBOUNCE_MS = 300
 
 export default function LibraryPage() {
-    // Which filter chip is toggled on. Starts with "rating" active to match the original design.
-    const [activeFilter, setActiveFilter] = useState<FilterKey | null>("rating")
+    const [search, setSearch] = useState("")
+    const [genre, setGenre] = useState("")
+    const [year, setYear] = useState("")
+    const [rating, setRating] = useState("")
+    const [language, setLanguage] = useState("")
+    const [page, setPage] = useState(1)
+
+    const router = useRouter()
+    const searchParams = useSearchParams()
+
+    const [movies, setMovies] = useState<Movie[]>([])
+    const [loading, setLoading] = useState(false)
+    const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null)
+    const [filterOptions, setFilterOptions] = useState<FilterOption[]>([])
+
+    const currentValues: Record<FilterKey, string> = { genre, year, rating, language }
 
     function toggleFilter(key: FilterKey) {
         setActiveFilter((current) => (current === key ? null : key))
     }
 
+    function selectFilterValue(key: FilterKey, value: string) {
+        const setters: Record<FilterKey, (v: string) => void> = {
+            genre: setGenre,
+            year: setYear,
+            rating: setRating,
+            language: setLanguage,
+        }
+
+        // clicking the same value again clears it
+        setters[key](currentValues[key] === value ? "" : value)
+        setPage(1)
+        setActiveFilter(null)
+    }
+
+    function buildQueryParams() {
+        const params = new URLSearchParams(searchParams.toString())
+
+        if (search.trim()) params.set("search", search.trim())
+        else params.delete("search")
+
+        if (genre) params.set("genre", genre)
+        else params.delete("genre")
+
+        if (year) params.set("year", year)
+        else params.delete("year")
+
+        if (rating) params.set("rating", rating)
+        else params.delete("rating")
+
+        if (language) params.set("language", language)
+        else params.delete("language")
+
+        params.set("page", String(page))
+
+        return params
+    }
+
+    // Fetch filter options once on mount
+    useEffect(() => {
+        const controller = new AbortController()
+
+        const fetchFilters = async () => {
+            try {
+                const response = await api.get("/filters", {
+                    signal: controller.signal,
+                })
+                setFilterOptions(response.data)
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    console.error(error)
+                }
+            }
+        }
+
+        fetchFilters()
+
+        return () => controller.abort()
+    }, [])
+
+    // Fetch movies whenever search/filters/page change
+    useEffect(() => {
+        const controller = new AbortController()
+
+        const fetchMovies = async () => {
+            setLoading(true)
+            try {
+                const params = buildQueryParams()
+
+                router.replace(`/library?${params.toString()}`, { scroll: false })
+
+                const response = await api.get(`/movies/?${params.toString()}`, {
+                    signal: controller.signal,
+                })
+                setMovies(response.data)
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    console.error(error)
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setLoading(false)
+                }
+            }
+        }
+
+        const timeout = setTimeout(fetchMovies, DEBOUNCE_MS)
+
+        return () => {
+            clearTimeout(timeout)
+            controller.abort()
+        }
+    }, [search, genre, year, rating, language, page])
+
     return (
         <div className="dark flex min-h-screen flex-col bg-background text-on-background">
             <Navbar />
-
             <main className="flex-grow px-4 pb-12 pt-24 md:px-16">
                 <header className="mb-12 space-y-8 pt-2">
                     <div className="mx-auto max-w-4xl">
@@ -81,8 +163,13 @@ export default function LibraryPage() {
                             <Search className="size-6 shrink-0 text-on-surface-variant" />
                             <input
                                 type="text"
-                                placeholder="Search movies, genres, or directors..."
-                                className="w-full border-0 bg-transparent text-base text-on-background placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-0 md:text-lg"
+                                value={search}
+                                onChange={(e) => {
+                                    setSearch(e.target.value)
+                                    setPage(1)
+                                }}
+                                placeholder="Search movies..."
+                                className="w-full bg-transparent outline-none placeholder:text-on-surface-variant"
                             />
                             <button
                                 type="button"
@@ -95,25 +182,45 @@ export default function LibraryPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
-                        {FILTER_OPTIONS.map(({ key, label }) => {
+                        {filterOptions.map(({ key, label, options }) => {
                             const isActive = activeFilter === key
+                            const currentValue = currentValues[key]
 
                             return (
-                                <button
-                                    key={key}
-                                    type="button"
-                                    aria-pressed={isActive}
-                                    onClick={() => toggleFilter(key)}
-                                    className={cn(
-                                        "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
-                                        isActive
-                                            ? "border-primary/50 bg-white/5 text-primary"
-                                            : "border-white/10 bg-white/5 text-on-background hover:bg-white/10"
+                                <div key={key} className="relative">
+                                    <button
+                                        type="button"
+                                        aria-pressed={isActive}
+                                        onClick={() => toggleFilter(key)}
+                                        className={cn(
+                                            "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                                            isActive || currentValue
+                                                ? "border-primary/50 bg-white/5 text-primary"
+                                                : "border-white/10 bg-white/5 text-on-background hover:bg-white/10"
+                                        )}
+                                    >
+                                        {currentValue || label}
+                                        <ChevronDown className="size-4" />
+                                    </button>
+
+                                    {isActive && (
+                                        <div className="absolute left-0 top-full z-10 mt-2 min-w-[10rem] rounded-xl border border-white/10 bg-[#1A1A1C] p-1 shadow-lg">
+                                            {options.map((option) => (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    onClick={() => selectFilterValue(key, option)}
+                                                    className={cn(
+                                                        "block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-white/10",
+                                                        currentValue === option && "text-primary"
+                                                    )}
+                                                >
+                                                    {option}
+                                                </button>
+                                            ))}
+                                        </div>
                                     )}
-                                >
-                                    {label}
-                                    <ChevronDown className="size-4" />
-                                </button>
+                                </div>
                             )
                         })}
 
@@ -130,29 +237,42 @@ export default function LibraryPage() {
                 </header>
 
                 <section className="mb-12 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 lg:gap-6">
-                    {MOVIES.map((movie) => (
-                        <MovieCard key={movie.title} movie={movie} watched={movie.watched} />
-                    ))}
-
-                    {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-                        <div
-                            key={`skeleton-${index}`}
-                            aria-hidden="true"
-                            className="skeleton aspect-[2/3] overflow-hidden rounded-xl bg-[#1A1A1C]"
+                    {movies.map((movie) => (
+                        <MovieCard
+                            key={movie.id ?? movie.title}
+                            movie={movie}
+                            watched={movie.watched}
+                            imageUrl={movie.image}
                         />
                     ))}
+
+                    {loading &&
+                        Array.from({ length: SKELETON_COUNT }).map((_, index) => (
+                            <div
+                                key={`skeleton-${index}`}
+                                aria-hidden="true"
+                                className="skeleton aspect-[2/3] overflow-hidden rounded-xl bg-[#1A1A1C]"
+                            />
+                        ))}
                 </section>
 
-                <div
-                    role="status"
-                    aria-live="polite"
-                    className="flex items-center justify-center gap-3 py-6 text-on-surface-variant"
-                >
-                    <Loader2 className="size-6 animate-spin text-primary" />
-                    <span className="text-sm font-semibold">Loading more titles...</span>
-                </div>
-            </main>
+                {loading && (
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className="flex items-center justify-center gap-3 py-6 text-on-surface-variant"
+                    >
+                        <Loader2 className="size-6 animate-spin text-primary" />
+                        <span className="text-sm font-semibold">Loading more titles...</span>
+                    </div>
+                )}
 
+                {!loading && movies.length === 0 && (
+                    <p className="py-10 text-center text-sm text-on-surface-variant">
+                        No movies found. Try adjusting your search or filters.
+                    </p>
+                )}
+            </main>
             <Footer />
         </div>
     )
