@@ -1,5 +1,10 @@
 # Hypertube
 
+## MTDB_TOKE
+
+TMDB_TOKEN='eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2N2ZkMmI4YjRiZTQ3ZGE3YTU5ZjlhZjgxOTE3M2RmOCIsIm5iZiI6MTc4NDQwNzkyNy40MTI5OTk5LCJzdWIiOiI2YTViZTc3N2RiNTVhN2M0MjBjNTRkOWIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.cOVFZxGbJZ5crPeMPaQPGJv1I24R8W_l1tgvCqwQLIM'
+
+
 ## Project Goal
 
 Build a full-stack web application that allows authenticated users to search, stream, and watch legally distributable videos. Videos are downloaded via the BitTorrent protocol on the server and streamed while downloading.

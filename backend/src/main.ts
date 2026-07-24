@@ -17,6 +17,11 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  app.enableCors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  });
+
+  await app.listen(process.env.PORT ?? 8080);
 }
 bootstrap();
