@@ -1,16 +1,18 @@
-import { movieRepository } from "@/features/library/details/repositories/details.repository"
-import { MovieDetails } from "@/features/library/details/details.types"
+import { httpClient, HttpClient } from "./httpClient";
+import type { ApiResponse, Movie, MovieId } from "../details.types";
 
-export const movieService = {
-    async fetchMovieDetails(id: string | number, signal?: AbortSignal): Promise<MovieDetails> {
-        return movieRepository.getMovieById(id, signal)
-    },
+/**
+ * Service layer: knows the API's URL shape and response envelope.
+ * Returns the raw domain object (unwrapped from { statusCode, message, data }).
+ * Does not know about React, hooks, or UI state.
+ */
+export class MovieService {
+  constructor(private readonly client: HttpClient = httpClient) {}
 
-    async updateMyListStatus(
-        id: string | number,
-        inMyList: boolean,
-        signal?: AbortSignal
-    ): Promise<void> {
-        return movieRepository.setMyListStatus(id, inMyList, signal)
-    },
+  async getMovieById(id: MovieId, signal?: AbortSignal): Promise<Movie> {
+    const response = await this.client.get<ApiResponse<Movie>>(`/movies/${id}`, signal);
+    return response.data;
+  }
 }
+
+export const movieService = new MovieService();

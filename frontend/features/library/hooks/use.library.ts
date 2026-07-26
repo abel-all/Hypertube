@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { libraryService } from "@/features/library/services/library.services"
 import { FilterKey, FilterOption, Movie } from "@/features/library/library.types"
+
 
 const DEBOUNCE_MS = 300
 
@@ -20,6 +22,8 @@ export function useLibrary() {
 
     const [movies, setMovies] = useState<Movie[]>([])
     const [loading, setLoading] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const loaderRef = useRef<HTMLDivElement | null>(null)
     const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null)
     const [filterOptions, setFilterOptions] = useState<FilterOption[]>([])
 
@@ -44,7 +48,7 @@ export function useLibrary() {
     }
 
     // Fetch filter options once on mount
-    useEffect(() => {
+    useEffect(() => {threshold: 0.5
         const controller = new AbortController()
 
         libraryService
@@ -73,7 +77,13 @@ export function useLibrary() {
                     controller.signal
                 )
                 router.replace(`/library?${queryString}`, { scroll: false })
-                setMovies(movies)
+                if (page === 1) {
+                    setMovies(movies.results)
+                } else {
+                    setMovies((prev) => [...prev, ...movies.results])
+                }
+
+                setHasMore(movies.page < movies.totalPages)
             } catch (error) {
                 if (!controller.signal.aborted) {
                     console.error(error)
@@ -93,6 +103,29 @@ export function useLibrary() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, genre, year, rating, language, page])
 
+    useEffect(() => {
+        if (!loaderRef.current) return
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (
+                    entries[0].isIntersecting &&
+                    !loading &&
+                    hasMore
+                ) {
+                    setPage((prev) => prev + 1)
+                }
+            },
+            {
+                threshold: 0.5,
+            }
+        )
+
+        observer.observe(loaderRef.current)
+
+        return () => observer.disconnect()
+    }, [loading, hasMore])
+
     return {
         search,
         setSearch,
@@ -109,5 +142,7 @@ export function useLibrary() {
         currentValues,
         toggleFilter,
         selectFilterValue,
+        loaderRef,
+        hasMore,
     }
 }

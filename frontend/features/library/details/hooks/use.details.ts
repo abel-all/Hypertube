@@ -1,57 +1,71 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { movieService } from "@/features/library/details/services/details.service"
-import { MovieDetails } from "@/features/library/details/details.types"
+import { useCallback, useEffect, useState } from "react";
+import { movieRepository, IMovieRepository } from "../repositories/details.repository";
+import type { Movie, MovieId } from "../details.types";
 
-export function useMovieDetails(movieId: string | number) {
-    const [movie, setMovie] = useState<MovieDetails | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const [togglingMyList, setTogglingMyList] = useState(false)
+export interface UseMovieResult {
+  movie: Movie | null;
+  loading: boolean;
+  error: string | null;
+  inMyList: boolean;
+  toggleMyList: () => void;
+  refetch: () => void;
+}
 
-    useEffect(() => {
-        const controller = new AbortController()
+/**
+ * Hook layer: the only place that owns React state for a single movie.
+ * Components should use this instead of calling the repository/service
+ * directly, so the data-fetching concern stays out of the view.
+ */
+export function useMovie(movieId: MovieId, repository: IMovieRepository = movieRepository): UseMovieResult {
+  const [movie, setMovie] = useState<Movie | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [inMyList, setInMyList] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
 
-        const fetchDetails = async () => {
-            setLoading(true)
-            setError(null)
-            try {
-                const data = await movieService.fetchMovieDetails(movieId, controller.signal)
-                setMovie(data)
-            } catch (err) {
-                if (!controller.signal.aborted) {
-                    console.error(err)
-                    setError("Failed to load movie details.")
-                    setMovie(null)
-                }
-            } finally {
-                if (!controller.signal.aborted) setLoading(false)
-            }
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await repository.getById(movieId, { forceRefresh: refreshToken > 0 });
+        if (!cancelled) {
+          setMovie(result);
+          setInMyList(result.inMyList);
         }
-
-        fetchDetails()
-
-        return () => controller.abort()
-    }, [movieId])
-
-    const toggleMyList = useCallback(async () => {
-        if (!movie || togglingMyList) return
-
-        const nextValue = !movie.inMyList
-        setTogglingMyList(true)
-        setMovie((current) => (current ? { ...current, inMyList: nextValue } : current))
-
-        try {
-            await movieService.updateMyListStatus(movie.id, nextValue)
-        } catch (err) {
-            console.error(err)
-            // revert the optimistic update on failure
-            setMovie((current) => (current ? { ...current, inMyList: !nextValue } : current))
-        } finally {
-            setTogglingMyList(false)
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load movie");
         }
-    }, [movie, togglingMyList])
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
 
-    return { movie, loading, error, toggleMyList, togglingMyList }
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movieId, refreshToken]);
+
+  const toggleMyList = useCallback(() => {
+    setInMyList((prev) => {
+      const next = !prev;
+      repository.setInMyList(movieId, next);
+      return next;
+    });
+  }, [movieId, repository]);
+
+  const refetch = useCallback(() => {
+    setRefreshToken((t) => t + 1);
+  }, []);
+
+  return { movie, loading, error, inMyList, toggleMyList, refetch };
 }

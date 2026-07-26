@@ -1,6 +1,6 @@
+// filters.controller.ts
 import { Controller, Get } from '@nestjs/common';
 import { FiltersService } from './filters.service';
-import { FilterOptionDto } from './dto/filter-option.dto';
 import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller('filters')
@@ -9,7 +9,7 @@ export class FiltersController {
 
   @Public()
   @Get()
-  getFilters(): FilterOptionDto[] {
+  async getFilters() {
     return this.filtersService.getFilters();
   }
 }
