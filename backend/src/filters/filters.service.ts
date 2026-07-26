@@ -1,30 +1,38 @@
+// filters.service.ts
 import { Injectable } from '@nestjs/common';
-import { FilterOptionDto } from './dto/filter-option.dto';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class FiltersService {
-  getFilters(): FilterOptionDto[] {
+  constructor(
+    private readonly http: HttpService,
+    private readonly config: ConfigService,
+  ) {}
+
+  async getFilters() {
+    const token = this.config.get<string>('TMDB_TOKEN');
+    const response = await firstValueFrom(
+      this.http.get('https://api.themoviedb.org/3/genre/movie/list', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+
+    const genreOptions: string[] = response.data.genres.map((g: any) => g.name);
+
+    const currentYear = new Date().getFullYear();
+    const yearOptions = Array.from({ length: 15 }, (_, i) => String(currentYear - i));
+
+    const ratingOptions = ['9', '8', '7', '6', '5'];
+
+    const languageOptions = ['en', 'fr', 'es', 'ja', 'ko', 'de'];
+
     return [
-      {
-        key: 'genre',
-        label: 'Genre',
-        options: ['Action', 'Drama', 'Sci-Fi', 'Comedy', 'Horror', 'Romance'],
-      },
-      {
-        key: 'year',
-        label: 'Year',
-        options: ['2026', '2025', '2024', '2023', '2022', '2021'],
-      },
-      {
-        key: 'rating',
-        label: 'Rating',
-        options: ['9+', '8+', '7+', '6+'],
-      },
-      {
-        key: 'language',
-        label: 'Language',
-        options: ['English', 'Arabic', 'French', 'Spanish', 'Japanese'],
-      },
+      { key: 'genre', label: 'Genre', options: genreOptions },
+      { key: 'year', label: 'Year', options: yearOptions },
+      { key: 'rating', label: 'Rating', options: ratingOptions },
+      { key: 'language', label: 'Language', options: languageOptions },
     ];
   }
 }

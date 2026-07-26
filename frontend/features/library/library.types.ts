@@ -15,6 +15,10 @@ export type Movie = {
     image: string
     alt: string
     watched?: boolean
+    results?: Movie[]
+    totalPages?: number
+    page?: number
+
 }
 
 export type LibraryFilters = {
@@ -24,4 +28,11 @@ export type LibraryFilters = {
     rating: string
     language: string
     page: number
+}
+
+export interface MoviesResponse {
+  page: number
+  totalPages: number
+  totalResults: number
+  results: Movie[]
 }

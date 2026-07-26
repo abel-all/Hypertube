@@ -1,5 +1,9 @@
 import { libraryRepository } from "@/features/library/repositories/library.repositories"
-import { FilterOption, LibraryFilters, Movie } from "@/features/library/library.types"
+import {
+    FilterOption,
+    LibraryFilters,
+    MoviesResponse,
+} from "@/features/library/library.types"
 
 export const libraryService = {
     async fetchFilterOptions(signal?: AbortSignal): Promise<FilterOption[]> {
@@ -10,7 +14,7 @@ export const libraryService = {
         filters: LibraryFilters,
         existingParams: URLSearchParams,
         signal?: AbortSignal
-    ): Promise<{ movies: Movie[]; queryString: string }> {
+    ): Promise<{ movies: MoviesResponse; queryString: string }> {
         const params = buildQueryParams(filters, existingParams)
         const queryString = params.toString()
         const movies = await libraryRepository.getMovies(queryString, signal)

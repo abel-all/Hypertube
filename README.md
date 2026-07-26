@@ -29,21 +29,21 @@ Build a full-stack web application that allows authenticated users to search, st
 
 ## Library
 
-- Search bar
+- Search bar OK
 - Search from at least **2 legal external sources**
-- Display movie thumbnails
+- Display movie thumbnails 
 - Infinite scrolling
 - Pagination
 - Sorting
-- Filtering
+- Filtering OK
 - Watched / Unwatched indicator
 
 Each movie card should contain:
 
-- Poster
-- Title
-- Production Year
-- IMDb Rating
+- Poster OK
+- Title OK
+- Production Year OK
+- IMDb Rating OK
 - Genre
 
 ---

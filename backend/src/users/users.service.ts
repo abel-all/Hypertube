@@ -2,14 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DB } from '../db/db.provider';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
-
-export interface User {
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  password: string;
-}
+import {User} from './type';
 
 @Injectable()
 export class UsersService {

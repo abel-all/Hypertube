@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Footer from "@/components/layout/footer"
 import Navbar from "@/components/layout/navbar"
-import MovieCard from "@/components/movies/movie-card"
+import MovieCard from "@/components/movies/movieCard"
 import { cn } from "@/lib/utils"
 import { useLibrary } from "@/features/library/hooks/use.library"
 
@@ -29,6 +29,8 @@ export default function LibraryPage() {
         currentValues,
         toggleFilter,
         selectFilterValue,
+        loaderRef,
+        hasMore,
     } = useLibrary()
 
     return (
@@ -142,6 +144,7 @@ export default function LibraryPage() {
                             />
                         ))}
                 </section>
+                {hasMore && <div ref={loaderRef} className="h-10" />}
 
                 {loading && (
                     <div

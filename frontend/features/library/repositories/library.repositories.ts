@@ -14,15 +14,9 @@ export const libraryRepository = {
         return []
     },
 
-    async getMovies(queryString: string, signal?: AbortSignal): Promise<Movie[]> {
-        const response = await api.get(`/movies/?${queryString}`, { signal })
-        const data = response.data
+    async getMovies(queryString: string, signal?: AbortSignal) {
+        const response = await api.get(`/movies?${queryString}`, { signal })
 
-        if (Array.isArray(data)) return data
-        if (Array.isArray(data?.data)) return data.data
-        if (Array.isArray(data?.results)) return data.results
-
-        console.error("Unexpected /movies response shape:", data)
-        return []
-    },
+        return response.data.data
+    }
 }

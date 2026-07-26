@@ -1,65 +1,37 @@
-export type FilterKey = "genre" | "year" | "rating" | "language"
+/**
+ * Domain types for the "movie details" feature.
+ * Kept separate from the raw API response shape so the UI never depends
+ * directly on the wire format.
+ */
 
-export type FilterOption = {
-    key: FilterKey
-    label: string
-    options: string[]
+export interface Streaming {
+  watchedPercent: number;
+  elapsed: string;
+  total: string;
+  ready: boolean;
+  downloadProgress: number;
 }
 
-export type Movie = {
-    id?: string | number
-    title: string
-    year: string
-    rating: string
-    tags: string[]
-    image: string
-    alt: string
-    watched?: boolean
+export interface Movie {
+  id: number;
+  title: string;
+  rating: number;
+  year: number;
+  duration: string;
+  synopsis: string;
+  heroImage: string;
+  videoPreviewImage: string;
+  quality: string;
+  genres: string[];
+  inMyList: boolean;
+  streaming: Streaming;
 }
 
-export type LibraryFilters = {
-    search: string
-    genre: string
-    year: string
-    rating: string
-    language: string
-    page: number
-}
+export type MovieId = number | string;
 
-export type CastMember = {
-    id: string | number
-    name: string
-    character: string
-    photo: string
-    alt?: string
-}
-
-export type MovieDetails = {
-    id: string | number
-    title: string
-    year: string
-    duration: string
-    rating: number
-    genres: string[]
-    quality?: string
-    synopsis: string
-    heroImage: string
-    heroImageAlt?: string
-    videoPreviewImage?: string
-    videoPreviewImageAlt?: string
-    inMyList: boolean
-    streaming: {
-        ready: boolean
-        downloadProgress: number
-        watchedPercent: number
-        elapsed: string
-        total: string
-    }
-    details: {
-        director: string
-        writers: string[]
-        studio: string
-        language: string
-    }
-    cast: CastMember[]
+/** Raw shape returned by GET /movies/:id */
+export interface ApiResponse<T> {
+  statusCode: number;
+  message: string;
+  data: T;
 }
